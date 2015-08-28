@@ -1,0 +1,341 @@
+﻿
+<!doctype html>
+<html>
+<head>
+    <title>StreetBox</title>
+    <script type='text/javascript' src='./js/Oimo.js'></script>
+    <script type='text/javascript' src='./js/babylon.1.13.js'></script>
+    <style type='text/css'>
+        html, body, div, canvas {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+		.tip{
+			position:absolute;
+			left:10px;
+			top:10px;
+		}
+    </style>
+</head>
+
+<body>
+	<div class="tip">
+		测试小游戏  街头霸王 体积比较大 40M左右耐心等待！<br>
+		w &nbsp a &nbsp s &nbsp d &nbsp 移动  &nbsp  J&nbsp牛根 &nbsp K &nbsp 杜根 	
+	</div>
+    <canvas id='canvas' style="width:100%;height:100%" ></canvas>
+    <script type='text/javascript'>
+        var box = {};
+        var ryu ;
+        var canvas = document.getElementById('canvas');
+        var engine = new BABYLON.Engine(canvas, true);
+
+        // Babylon
+        var engine = new BABYLON.Engine(canvas, true);
+
+             scene = new BABYLON.Scene(engine);
+             scene.collisionsEnabled;
+
+        var light = new BABYLON.DirectionalLight("Omni", new BABYLON.Vector3(0,-1 , -1), scene);
+             light.intensity =0.8;
+
+        var light = new BABYLON.PointLight("Omni", new BABYLON.Vector3(0,6 , -3), scene);
+
+         scene.enablePhysics(null, new BABYLON.OimoJSPlugin());
+           //  scene.setGravity(new BABYLON.Vector3(0, -10, 0));
+
+
+
+
+        //var box = BABYLON.Mesh.CreateBox("box", 0.1, scene);
+
+        //camera = new BABYLON.ArcRotateCamera("Camera", 0, 0, 10, new BABYLON.Vector3(0,0,0), scene);
+        //camera = new BABYLON.FreeCamera("FreeCamera", new BABYLON.Vector3(0, 1, 1000), scene);
+        //camera.lockedtarget = new  new BABYLON.Vector3(0, 0, 0);
+        //camera.target = new BABYLON.Vector3(0,0,0);
+       camera = new BABYLON.FreeCamera("FreeCamera", new BABYLON.Vector3(0, 5, 10), scene);
+       camera.setTarget( new BABYLON.Vector3(0,0,0));
+
+        scene.activeCamera = camera;
+        // Then attach the activeCamera to the canvas.
+        scene.activeCamera.attachControl(canvas);
+
+        var ground = BABYLON.Mesh.CreateBox("Ground", 10, scene);
+            ground.scaling.y=0.001;
+            ground.checkCollisions = true;
+            ground.setPhysicsState({ impostor: BABYLON.PhysicsEngine.BoxImpostor, move:false});
+
+        var z1 = BABYLON.Mesh.CreateBox("Ground", 0.5, scene);
+            z1.position.x = 5;
+            z1.position.z = 5;
+
+        var z2 = BABYLON.Mesh.CreateBox("Ground", 0.5, scene);
+            z2.position.x = 5;
+            z2.position.z = -5;
+
+        var z3 = BABYLON.Mesh.CreateBox("Ground", 0.5, scene);
+            z3.position.x = -5;
+            z3.position.z = 5;
+
+        var z4 = BABYLON.Mesh.CreateBox("Ground", 0.5, scene);
+            z4.position.x = -5;
+            z4.position.z = -5;
+
+        engine.runRenderLoop(function () {
+            scene.render();
+        });
+
+        BABYLON.SceneLoader.ImportMesh("", "res/", "11.babylon?a="+new Date(), scene, function (newMeshes, particleSystems, skeletons) {
+            ryu = new Ryu(newMeshes,skeletons,scene);
+            window.setInterval(createBoxs,2000);
+        });
+
+
+
+        function Ryu(meshs,skletons,sence){
+                this._meshs      = meshs;
+                this._skletons = skletons;
+                this._sence    = sence;
+                this._hitting  = false;
+                this._moving    = false;
+                this._direction ;
+                this._init();
+                this.stand();
+        }
+
+        Ryu.prototype._init =function(){
+            var self = this;
+            this._body = new BABYLON.Mesh.CreateBox("box", 0.1, scene);
+            this._body.position = new BABYLON.Vector3(0,0,0);
+            for(var i=0;i<this._meshs.length;i++){
+                this._meshs[i].parent = this._body;
+            }
+            this._body.visibility = false;
+
+            this._leg = new BABYLON.Mesh.CreateCylinder("cylinder", 0.2, 3, 3, 6, 1, scene, false);
+            this._leg.position.y=0.7;
+            this._leg.parent=this._body;
+            this._leg.visibility =false;
+
+            this._hand =  new BABYLON.Mesh.CreateBox("box", 1.5, scene);
+            this._hand.position.y = 1.8;
+            this._hand.parent=this._body;
+            this._hand.visibility =false;
+
+
+            this._sence.actionManager = new BABYLON.ActionManager(this._sence);
+            this._sence.registerBeforeRender(function(){
+                var hit = self._body;
+                var ld  = 1;
+                if(self._hitting == 1 ){
+                    hit = self._hand;
+                    ld = 4;
+                }else if(self._hitting==2){
+                    hit = self._leg;
+                    ld = 3;
+                }
+
+               // console.log(bads.length);
+                for(var i=0;i<bads.length;i++){
+                    if(hit.intersectsMesh(bads[i],false)){
+                        bads[i].applyImpulse(new BABYLON.Vector3((bads[i].position.x- self._body.position.x)*ld ,(bads[i].position.y- self._body.position.y)*ld ,(bads[i].position.z- self._body.position.z)*ld) ,bads[i].position);
+                    }
+                }
+
+                if(self._moving){
+                    self.move(self._direction);
+                }
+            });
+            this._sence.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger,
+                    function (evt) {
+                            var key = evt.sourceEvent.keyCode;
+                           switch (key){
+                                case 74://j
+                                    self.ng();
+                                    break;
+                                case 75://k
+                                    self.bbbg();
+                                    break;
+                               case 87://w
+                                   self._moving =true;
+                                   self._direction ="W";
+                                   self.turn("W");
+                                    break;
+                               case 83://s
+                                   self._moving =true;
+                                   self._direction ="S";
+                                   self.turn("S");
+                                   break;
+                               case 65://a
+                                   self._moving =true;
+                                   self._direction ="A";
+                                   self.turn("A");
+                                   break;
+                               case 68://d
+                                   self._moving =true;
+                                   self._direction ="D";
+                                   self.turn("D");
+                                   break;
+                            }
+                    }));
+            this._sence.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger,
+                    function (evt) {
+                        var key = evt.sourceEvent.keyCode;
+                        switch (key){
+                            case 87://w
+                                self._moving = false;
+                                self._direction =null;
+                                break;
+                            case 83://s
+                                self._moving =false;
+                                self._direction =null;
+                                break;
+                            case 65://a
+                                self._moving =false;
+                                self._direction =null;
+                                break;
+                            case 68://d
+                                self._moving =false;
+                                self._direction =null;
+                                break;
+                        }
+                    }));
+        };
+
+        Ryu.prototype.ng = function(){
+            var self = this;
+            if(this._hitting>0){
+               return;
+            }
+            this._hitting = 1;
+
+            if(this._body.animations.length==0){
+                var jump = new BABYLON.Animation("myAnimation","position.y",30,BABYLON.Animation.ANIMATIONTYPE_FLOAT,BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+                var keys = [];
+                keys.push({
+                    frame: 0,
+                    value: this._body.position.y
+                });
+
+                //At the animation key 20, the value of scaling is "0.2"
+                keys.push({
+                    frame: 45,
+                    value: this._body.position.y+1
+                });
+
+                //At the animation key 100, the value of scaling is "1"
+                keys.push({
+                    frame: 90,
+                    value: this._body.position.y
+                });
+                jump.setKeys(keys);
+                this._body.animations.push(jump);
+
+            }
+
+
+            scene.beginAnimation(this._body, 0, 90, false, 2, function () {
+                    self._hitting = -1;
+            });
+
+
+
+            for(var i=0;i< this._skletons.length;i++ ){
+
+                scene.beginAnimation(this._skletons[i], 89, 180, false, 2,function(){
+                    self._hitting = false;
+                    self.stand();
+                });
+            }
+        };
+
+        Ryu.prototype.bbbg = function(){
+            var self = this;
+            if(this._hitting>0){
+                return;
+            }
+            this._hitting = 2;
+            for(var i=0;i< this._skletons.length;i++ ){
+                scene.beginAnimation(this._skletons[i], 0, 88, false, 3.0,function(){
+                    self._hitting = -1;
+                    self.stand();
+                });
+            }
+        };
+        Ryu.prototype.stand = function(){
+            for(var i=0;i< this._skletons.length;i++ ){
+                scene.beginAnimation(this._skletons[i], 179, 188, true, 0.5,function(){
+                });
+            }
+        };
+        Ryu.prototype.move =function(direction){
+                switch(direction){
+                    case "W":
+                              this._body.position.z  -=0.5;
+                           break;
+                    case "S":
+                              this._body.position.z  +=0.5;
+                           break;
+                    case "A":
+                            this._body.position.x    +=0.5;
+                            break;
+                    case "D":
+                            this._body.position.x   -=0.5;
+                            break;
+                }
+                if(this._body.position.x>5){
+                    this._body.position.x=5;
+                }
+
+                if(this._body.position.x<-5){
+                    this._body.position.x=-5;
+                }
+
+                if(this._body.position.z>5){
+                    this._body.position.z=5;
+                }
+
+                if(this._body.position.z<-5){
+                    this._body.position.z=-5;
+                }
+        };
+
+        Ryu.prototype.turn = function(direction){
+            switch(direction){
+                case "W":
+                    this._body.rotation.y = Math.PI;
+                    break;
+                case "S":
+                    this._body.rotation.y = 0;
+                    break;
+                case "A":
+                    this._body.rotation.y =Math.PI/2 ;
+                    break;
+                case "D":
+                    this._body.rotation.y= Math.PI*3/2 ;
+                    break;
+
+            }
+        };
+
+        var bads = [];
+        function createBoxs(){
+            for(var i=0;i<10;i++){
+                var box = BABYLON.Mesh.CreateBox("box", 1, scene);
+                     box.position.y = 6;
+                     box.checkCollisions = true;
+                     box.position.z = Math.random()*10-5;
+                     box.position.x = Math.random()*10-5;
+                     box.setPhysicsState({impostor:BABYLON.PhysicsEngine.BoxImpostor, move:true, mass:1, friction:0.5, restitution:0.1});
+                     bads.push(box);
+                    //console.log(box.position.x);
+            }
+        }
+
+
+    </script>
+</body>
+</html>
